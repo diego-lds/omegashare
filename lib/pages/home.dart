@@ -12,18 +12,27 @@ GoogleSignIn googleSignIn = GoogleSignIn();
 class _HomeState extends State<Home> {
   bool auth = false;
 
+  handleSignIn(GoogleSignInAccount account) {
+    setState(() {
+      auth = account != null;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+
     googleSignIn.onCurrentUserChanged.listen((account) {
-      if (account != null) {
-        print('--->$account');
-        setState(() {
-          auth = true;
-        });
-      } else {
-        auth = false;
-      }
+      handleSignIn(account);
+    }, onError: (err) {
+      print('Erro $err');
+    });
+
+    // Reautenticação ao usuário voltar pro app
+    googleSignIn.signInSilently(suppressErrors: false).then((account) {
+      handleSignIn(account);
+    }, onError: (err){
+        print('Erro $err');
     });
   }
 
