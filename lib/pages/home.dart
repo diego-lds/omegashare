@@ -17,7 +17,6 @@ class Home extends StatefulWidget {
 GoogleSignIn googleSignIn = GoogleSignIn();
 
 class _HomeState extends State<Home> {
-
   bool auth = false;
   PageController pageController;
   int pageIndex = 0;
@@ -41,13 +40,13 @@ class _HomeState extends State<Home> {
     // Reautenticação ao usuário voltar pro app
     googleSignIn.signInSilently(suppressErrors: false).then((account) {
       handleSignIn(account);
-    }, onError: (err){
-        print('Erro $err');
+    }, onError: (err) {
+      print('Erro $err');
     });
   }
 
   @override
-  dispose(){
+  dispose() {
     super.dispose();
     pageController.dispose();
   }
@@ -55,7 +54,8 @@ class _HomeState extends State<Home> {
   login() {
     googleSignIn.signIn();
   }
-  logout(){
+
+  logout() {
     googleSignIn.signOut();
   }
 
@@ -65,10 +65,9 @@ class _HomeState extends State<Home> {
     });
   }
 
-  onTap(int pageIndex){
-    pageController.jumpToPage(
-        pageIndex,
-    );
+  onTap(int pageIndex) {
+    pageController.animateToPage(pageIndex,
+        curve: Curves.easeIn, duration: Duration(milliseconds: 200));
   }
 
   Scaffold buildAuthScreen() {
@@ -92,7 +91,11 @@ class _HomeState extends State<Home> {
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.whatshot)),
           BottomNavigationBarItem(icon: Icon(Icons.notifications_active)),
-          BottomNavigationBarItem(icon: Icon(Icons.photo_camera, size: 35.0,)),
+          BottomNavigationBarItem(
+              icon: Icon(
+            Icons.photo_camera,
+            size: 35.0,
+          )),
           BottomNavigationBarItem(icon: Icon(Icons.search)),
           BottomNavigationBarItem(icon: Icon(Icons.account_circle)),
         ],
@@ -150,6 +153,4 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return auth ? buildAuthScreen() : buildUnauthScreen();
   }
-
-
 }

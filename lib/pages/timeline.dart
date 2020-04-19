@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:omegashare/pages/progress.dart';
 import 'header.dart';
 
 class Timeline extends StatefulWidget {
@@ -11,7 +12,7 @@ class _TimelineState extends State<Timeline> {
   Widget build(context) {
     return Scaffold(
       appBar: header(context, titleText: 'Omega Share'),
-      body: Text('Timeline')
+      body: linearProgress(),
     );
   }
 }
