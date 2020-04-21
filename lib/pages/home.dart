@@ -1,12 +1,14 @@
-import 'dart:developer';
 
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:omegashare/pages/activity_feed.dart';
+import 'package:omegashare/pages/create_account.dart';
 import 'package:omegashare/pages/profile.dart';
 import 'package:omegashare/pages/search.dart';
-import 'package:omegashare/pages/timeline.dart';
+
 import 'package:omegashare/pages/upload.dart';
 
 class Home extends StatefulWidget {
@@ -15,6 +17,9 @@ class Home extends StatefulWidget {
 }
 
 GoogleSignIn googleSignIn = GoogleSignIn();
+final usersRef = Firestore.instance.collection('users');
+
+final DateTime timestamp = DateTime.now();
 
 class _HomeState extends State<Home> {
   bool auth = false;
@@ -22,9 +27,39 @@ class _HomeState extends State<Home> {
   int pageIndex = 0;
 
   handleSignIn(GoogleSignInAccount account) {
-    setState(() {
-      auth = account != null;
-    });
+    if (account != null) {
+      createUserInFirestore(account);
+      setState(() {
+        auth = true;
+      });
+    } else {
+      setState(() {
+        auth = false;
+      });
+    }
+  }
+
+  createUserInFirestore(account) async {
+    final GoogleSignInAccount user = googleSignIn.currentUser;
+
+    final DocumentSnapshot doc = await usersRef.document(user.id).get();
+
+    if (!doc.exists) {
+      final username = await Navigator.push(
+          context, MaterialPageRoute(builder: (context) => CreateAccount()));
+
+      usersRef.document(user.id).setData({
+        'id': user.id,
+        'username': username,
+        'userUrl': user.photoUrl,
+        'email': user.email,
+        'displayName': user.displayName,
+        'bio': '',
+        'timestamp': timestamp,
+        'postCount': 0,
+        'isAdmin': false,
+      });
+    }
   }
 
   @override
@@ -74,7 +109,11 @@ class _HomeState extends State<Home> {
     return Scaffold(
       body: PageView(
         children: <Widget>[
-          Timeline(),
+//          Timeline(),
+          FlatButton(
+            child: Text('Deslogar'),
+            onPressed: logout,
+          ),
           ActivityFeed(),
           Upload(),
           Search(),
