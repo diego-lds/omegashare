@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:omegashare/pages/home.dart';
-
+import 'package:omegashare/pages/search.dart';
 
 void main() {
   runApp(MyApp());
@@ -16,7 +15,7 @@ class MyApp extends StatelessWidget {
       ),
       title: 'FlutterShare',
       debugShowCheckedModeBanner: false,
-      home: Home(),
+      home: Search(),
     );
   }
 }
