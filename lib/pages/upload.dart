@@ -1,12 +1,17 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:omegashare/models/user.dart';
 import 'package:omegashare/pages/home.dart';
+import 'package:omegashare/widgets/progress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:image/image.dart' as Im;
+import 'package:uuid/uuid.dart';
 
 class Upload extends StatefulWidget {
   final User currentUser;
@@ -18,7 +23,11 @@ class Upload extends StatefulWidget {
 }
 
 class _UploadState extends State<Upload> {
+  TextEditingController locationController = TextEditingController();
+  TextEditingController captionController = TextEditingController();
   File file;
+  bool isUploading = false;
+  String postId = Uuid().v4();
 
   handleTakePhoto() async {
     Navigator.pop(context);
@@ -88,14 +97,63 @@ class _UploadState extends State<Upload> {
   }
 
   clearImage() {
-
     setState(() {
       file = null;
     });
   }
 
-  buildUploadForm() {
+  compressImage() async {
+    final tempDir = await getTemporaryDirectory();
+    final path = tempDir.path;
+    Im.Image imageFile = Im.decodeImage(file.readAsBytesSync());
+    final compressedImageFile = File('$path/img_$postId.jpg')..writeAsBytesSync(Im.encodeJpg(imageFile, quality: 85));
+    setState(() {
+      file = compressedImageFile;
+    });
+  }
 
+  handleSubmit() async {
+    setState(() {
+      isUploading = true;
+    });
+    await compressImage();
+    String mediaUrl = await uploadImage(file);
+    createPostOnFirestore(
+      mediaUrl: mediaUrl,
+      caption: captionController.text,
+      location: locationController.text,
+    );
+    captionController.clear();
+    locationController.clear();
+    setState(() {
+      file = null;
+      isUploading = false;
+      postId= Uuid().v4();
+    });
+  }
+
+  createPostOnFirestore({String mediaUrl, String location, String caption}) {
+    postsRef.document(currentUser.id).collection("userPosts").document(postId).setData({
+      "postId": postId,
+      "ownerId": currentUser.id,
+      "username": currentUser.username,
+      "mediaUrl": mediaUrl,
+      "caption": caption,
+      "location": location,
+      "timestamp": timestamp,
+      "likes":{},
+    });
+  }
+
+
+  Future<String> uploadImage(imageFile) async {
+    StorageUploadTask uploadTask = storageRef.child('post_$postId.jpg').putFile(imageFile);
+    StorageTaskSnapshot storageSnap = await uploadTask.onComplete;
+    String downloadUrl = await storageSnap.ref.getDownloadURL();
+    return downloadUrl;
+  }
+
+  buildUploadForm() {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -108,13 +166,14 @@ class _UploadState extends State<Upload> {
         centerTitle: true,
         actions: <Widget>[
           FlatButton(
-            onPressed: () => print('post'),
+            onPressed: isUploading ? null : () => handleSubmit(),
             child: Text('Postar', style: TextStyle(color: Colors.blueAccent, fontSize: 20.0)),
           ),
         ],
       ),
       body: ListView(
         children: <Widget>[
+          isUploading ? linearProgress() : SizedBox.shrink(),
           Container(
             height: 220,
             width: MediaQuery.of(context).size.width * 0.8,
@@ -140,6 +199,7 @@ class _UploadState extends State<Upload> {
               title: Container(
                 width: 250.0,
                 child: TextField(
+                  controller: captionController,
                   decoration: InputDecoration(
                     hintText: 'Escreva algo...',
                     border: InputBorder.none,
@@ -150,25 +210,30 @@ class _UploadState extends State<Upload> {
             height: 2.0,
           ),
           ListTile(
-              leading: Icon(
-                Icons.pin_drop,
-                color: Colors.orange,
-                size: 35,
+            leading: Icon(
+              Icons.pin_drop,
+              color: Colors.orange,
+              size: 35,
+            ),
+            title: Container(
+              width: 250,
+              child: TextField(
+                controller: locationController,
+                decoration: InputDecoration(hintText: 'Local', border: InputBorder.none),
               ),
-              title: Container(
-                  width: 250,
-                  child: TextField(
-                    decoration: InputDecoration(hintText: 'Local', border: InputBorder.none),
-                  ))),
+            ),
+          ),
           Container(
             alignment: Alignment.center,
             child: RaisedButton.icon(
-              onPressed: () => print('oi'),
-              icon: Icon(Icons.my_location, color: Colors.white,),
-              label: Text('Localização atual', style: TextStyle(color:Colors.white)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              color: Colors.lightBlueAccent
-            ),
+                onPressed: () => print('oi'),
+                icon: Icon(
+                  Icons.my_location,
+                  color: Colors.white,
+                ),
+                label: Text('Localização atual', style: TextStyle(color: Colors.white)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                color: Colors.lightBlueAccent),
           ),
         ],
       ),
